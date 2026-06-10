@@ -36,10 +36,19 @@ var first_touch = Vector2.ZERO
 var final_touch = Vector2.ZERO
 var is_controlling = false
 
-# scoring variables and signals
+# === Temporizadores del ciclo destruir → colapsar → rellenar ===
+# Son nodos hijos de "grid"; el editor conecta sus señales "timeout" a este script.
+@onready var destroy_timer: Timer = $destroy_timer
+@onready var collapse_timer: Timer = $collapse_timer
+@onready var refill_timer: Timer = $refill_timer
 
-
-# counter variables and signals
+# === PUNTAJE (B1) y CONTADOR (B2) ===
+# Contrato sugerido para comunicarte con el HUD (top_ui.gd). No es obligatorio usar
+# señales, pero ayuda a mantener la UI desacoplada de la lógica del tablero:
+#   signal score_changed(nuevo_puntaje: int)
+#   signal counter_changed(restantes: int)        # movimientos o segundos, tú decides
+#   signal game_finished(gano: bool)
+# TODO (PARCIAL · B1/B2): declara aquí el puntaje y el contador (y sus señales, si las usas).
 
 
 # Called when the node enters the scene tree for the first time.
@@ -100,6 +109,7 @@ func match_at(i, j, color):
 		if all_pieces[i][j - 1] != null and all_pieces[i][j - 2] != null:
 			if all_pieces[i][j - 1].color == color and all_pieces[i][j - 2].color == color:
 				return true
+	return false
 
 func touch_input():
 	var mouse_pos = get_global_mouse_position()
@@ -128,6 +138,10 @@ func swap_pieces(column, row, direction: Vector2):
 	#other_piece.position = grid_to_pixel(column, row)
 	first_piece.move(grid_to_pixel(column + direction.x, row + direction.y))
 	other_piece.move(grid_to_pixel(column, row))
+	# TODO (PARCIAL · M3): si alguna de las piezas intercambiadas es especial,
+	# actívala aquí (su efecto reemplaza a la búsqueda normal de combinaciones).
+	# TODO (PARCIAL · B2): un intercambio válido consume una jugada. Decide dónde
+	# descontar el contador: aquí, o en destroy_matched() solo si hubo combinación.
 	if not move_checked:
 		find_matches()
 
@@ -162,6 +176,11 @@ func _process(delta):
 		touch_input()
 
 func find_matches():
+	# TODO (PARCIAL · M3): aquí es donde se decide qué piezas forman cada combinación.
+	# Para crear piezas especiales necesitas conocer el LARGO de cada línea: una de 4
+	# genera una pieza de línea (fila/columna) y una de 5 una bomba de color. El chequeo
+	# actual solo mira el "centro" de tríos; probablemente tengas que recorrer las
+	# líneas completas para distinguir combinaciones de 3, 4 y 5.
 	for i in width:
 		for j in height:
 			if all_pieces[i][j] != null:
@@ -195,7 +214,7 @@ func find_matches():
 					all_pieces[i][j + 1].matched = true
 					all_pieces[i][j + 1].dim()
 					
-	get_parent().get_node("destroy_timer").start()
+	destroy_timer.start()
 	
 func destroy_matched():
 	var was_matched = false
@@ -203,12 +222,14 @@ func destroy_matched():
 		for j in height:
 			if all_pieces[i][j] != null and all_pieces[i][j].matched:
 				was_matched = true
+				# TODO (PARCIAL · B1): suma puntaje por cada pieza destruida (o por
+				# combinación) y emite score_changed para actualizar el HUD.
 				all_pieces[i][j].queue_free()
 				all_pieces[i][j] = null
-				
+
 	move_checked = true
 	if was_matched:
-		get_parent().get_node("collapse_timer").start()
+		collapse_timer.start()
 	else:
 		swap_back()
 
@@ -216,7 +237,6 @@ func collapse_columns():
 	for i in width:
 		for j in height:
 			if all_pieces[i][j] == null:
-				print(i, j)
 				# look above
 				for k in range(j + 1, height):
 					if all_pieces[i][k] != null:
@@ -224,7 +244,7 @@ func collapse_columns():
 						all_pieces[i][j] = all_pieces[i][k]
 						all_pieces[i][k] = null
 						break
-	get_parent().get_node("refill_timer").start()
+	refill_timer.start()
 
 func refill_columns():
 	
@@ -255,18 +275,20 @@ func check_after_refill():
 		for j in height:
 			if all_pieces[i][j] != null and match_at(i, j, all_pieces[i][j].color):
 				find_matches()
-				get_parent().get_node("destroy_timer").start()
+				destroy_timer.start()
 				return
+	# El tablero quedó estable: no hay más combinaciones en cascada.
+	# TODO (PARCIAL · M1): verifica si se cumplió o falló el objetivo del nivel
+	# (puntaje meta, piezas recolectadas, etc.) y dispara victoria o derrota.
+	# TODO (PARCIAL · M2): comprueba si todavía existe alguna jugada válida; si no,
+	# rebaraja el tablero hasta que haya al menos una.
 	state = MOVE
-	
 	move_checked = false
 
 func _on_destroy_timer_timeout():
-	print("destroy")
 	destroy_matched()
 
 func _on_collapse_timer_timeout():
-	print("collapse")
 	collapse_columns()
 
 func _on_refill_timer_timeout():
@@ -274,4 +296,11 @@ func _on_refill_timer_timeout():
 	
 func game_over():
 	state = WAIT
-	print("game over")
+	# TODO (PARCIAL · B3): muestra la pantalla final (victoria o derrota), detén la
+	# entrada del jugador y ofrece reiniciar la partida. Emite game_finished(gano).
+	# TODO (PARCIAL · M4): guarda el progreso (nivel alcanzado) y el mejor puntaje
+	# en disco (user://) para conservarlos entre sesiones.
+
+# TODO (PARCIAL · M2): funciones sugeridas para detectar el bloqueo del tablero.
+# func hay_jugadas_validas() -> bool:
+# func rebarajar() -> void:

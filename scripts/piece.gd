@@ -4,6 +4,10 @@ extends Node2D
 
 var matched = false
 
+# TODO (PARCIAL · M3): para las piezas especiales podrías guardar aquí su tipo
+# (por ejemplo, "fila", "columna" o "bomba") y exponer un método que dispare su
+# efecto sobre el tablero cuando se active.
+
 func move(target):
 	var move_tween = create_tween()
 	move_tween.set_trans(Tween.TRANS_ELASTIC)
