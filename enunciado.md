@@ -3,6 +3,13 @@
 **Modalidad:** proyecto para casa, individual. **Plazo y fecha de entrega:** se publican en Moodle.
 **Motor:** Godot 4.6. **Entrega:** URL de tu repositorio (ver *Entrega* al final).
 
+> Esta es la **pista A** del parcial. Hay varias pistas (Match-3, Micromouse,
+> Planta SCADA); eliges **una sola**. Todas valen lo mismo y se califican con
+> la misma estructura. Esta pista premia sobre todo la **integración con
+> código existente** (leer, entender y extender un juego ya armado sin
+> romperlo); si prefieres algoritmos, mira la pista Micromouse; si prefieres
+> UI y visualización, mira la pista SCADA.
+
 ---
 
 ## 1. Contexto
