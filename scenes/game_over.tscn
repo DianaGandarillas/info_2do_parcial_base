@@ -1,20 +1,20 @@
-[gd_scene load_steps=2 format=3 uid="uid://dgap8nls5en6t"]
+[gd_scene format=3 uid="uid://dgap8nls5en6t"]
 
-[ext_resource type="Script" path="res://scripts/game_over.gd" id="1_vua3h"]
+[ext_resource type="Script" uid="uid://bkuuor2byj64m" path="res://scripts/game_over.gd" id="1_vua3h"]
 
-[node name="GameOver" type="CanvasLayer"]
+[node name="GameOver" type="CanvasLayer" unique_id=1602164539]
 layer = 128
 visible = false
 script = ExtResource("1_vua3h")
 
-[node name="Overlay" type="ColorRect" parent="."]
-anchors_preset = 0
+[node name="Overlay" type="ColorRect" parent="." unique_id=1675181070]
+anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-color = Color(0, 0, 0, 0.7)
 mouse_filter = 1
+color = Color(0, 0, 0, 0.7)
 
-[node name="VBoxContainer" type="VBoxContainer" parent="Overlay"]
+[node name="VBoxContainer" type="VBoxContainer" parent="Overlay" unique_id=1210153979]
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
@@ -29,16 +29,16 @@ grow_horizontal = 2
 grow_vertical = 2
 alignment = 1
 
-[node name="TitleLabel" type="Label" parent="Overlay/VBoxContainer"]
+[node name="TitleLabel" type="Label" parent="Overlay/VBoxContainer" unique_id=1854764357]
 layout_mode = 2
 text = "GAME OVER"
 horizontal_alignment = 1
 
-[node name="ScoreLabel" type="Label" parent="Overlay/VBoxContainer"]
+[node name="ScoreLabel" type="Label" parent="Overlay/VBoxContainer" unique_id=1798998021]
 layout_mode = 2
 text = "Puntaje: 0"
 horizontal_alignment = 1
 
-[node name="RestartButton" type="Button" parent="Overlay/VBoxContainer"]
+[node name="RestartButton" type="Button" parent="Overlay/VBoxContainer" unique_id=379433070]
 layout_mode = 2
 text = "Jugar de nuevo"

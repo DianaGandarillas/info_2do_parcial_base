@@ -51,9 +51,17 @@ signal score_changed(nuevo_puntaje: int)
 signal counter_changed(restantes: int)
 signal game_finished(gano: bool)
 
+#M1
+signal objective_changed(texto:String)
+
 var score = 0
 var moves_remaining = 30
 var target_score = 5000
+
+#M1
+var levels = []
+var current_level_index = 0
+var current_level : LevelConfig
 
 # === Sonidos (B4) ===
 @onready var sfx_swap: AudioStreamPlayer = $sfx_swap
@@ -63,6 +71,9 @@ var target_score = 5000
 func _ready():
 	state = MOVE
 	randomize()
+	#M1
+	load_levels()
+	load_level(0)
 	all_pieces = make_2d_array()
 	spawn_pieces()
 	emit_signal("counter_changed", moves_remaining)
@@ -286,6 +297,8 @@ func destroy_matched():
 				was_matched = true
 				score += 10
 				emit_signal("score_changed", score)
+				#m1
+				emit_signal("objective_changed", "%d / %d puntos" % [score, target_score])
 				all_pieces[i][j].queue_free()
 				all_pieces[i][j] = null
 
@@ -371,6 +384,10 @@ func _on_refill_timer_timeout():
 	
 func game_over(won: bool):
 	state = WAIT
+	#m1
+	if won:
+		if current_level_index < levels.size() - 1:
+			current_level_index += 1
 	emit_signal("game_finished", won)
 	var game_over_node = get_parent().get_node("GameOver")
 	if game_over_node:
@@ -396,7 +413,9 @@ func restart_game():
 	first_touch = Vector2.ZERO
 	final_touch = Vector2.ZERO
 	score = 0
-	moves_remaining = 30
+	#moves_remaining = 30
+	load_level(current_level_index)
+	
 	emit_signal("score_changed", score)
 	emit_signal("counter_changed", moves_remaining)
 	spawn_pieces()
@@ -595,3 +614,26 @@ func reshuffle():
 					all_pieces[i][j].color = rand_color
 					var path = "res://assets/pieces/" + rand_color.capitalize() + " Piece.png"
 					all_pieces[i][j].get_node("Sprite2D").texture = load(path)
+
+#M1
+func load_levels():
+
+	levels.clear()
+
+	levels.append(load("res://levels/level1.tres"))
+	levels.append(load("res://levels/level2.tres"))
+	levels.append(load("res://levels/level3.tres"))
+	
+	
+func load_level(index:int):
+
+	current_level_index = index
+
+	current_level = levels[index]
+
+	target_score = current_level.objetivo_valor
+
+	moves_remaining = current_level.limite_movimientos
+
+	emit_signal("counter_changed", moves_remaining)
+	emit_signal("objective_changed","Meta: %d puntos" % target_score)
