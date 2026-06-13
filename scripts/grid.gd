@@ -37,26 +37,34 @@ var final_touch = Vector2.ZERO
 var is_controlling = false
 
 # === Temporizadores del ciclo destruir → colapsar → rellenar ===
-# Son nodos hijos de "grid"; el editor conecta sus señales "timeout" a este script.
 @onready var destroy_timer: Timer = $destroy_timer
 @onready var collapse_timer: Timer = $collapse_timer
 @onready var refill_timer: Timer = $refill_timer
 
-# === PUNTAJE (B1) y CONTADOR (B2) ===
-# Contrato sugerido para comunicarte con el HUD (top_ui.gd). No es obligatorio usar
-# señales, pero ayuda a mantener la UI desacoplada de la lógica del tablero:
-#   signal score_changed(nuevo_puntaje: int)
-#   signal counter_changed(restantes: int)        # movimientos o segundos, tú decides
-#   signal game_finished(gano: bool)
-# TODO (PARCIAL · B1/B2): declara aquí el puntaje y el contador (y sus señales, si las usas).
+# === Puntaje y contador (B1/B2) ===
+signal score_changed(nuevo_puntaje: int)
+signal counter_changed(restantes: int)
+signal game_finished(gano: bool)
 
+var score = 0
+var moves_remaining = 30
+var target_score = 5000
 
-# Called when the node enters the scene tree for the first time.
+# === Sonidos (B4) ===
+@onready var sfx_swap: AudioStreamPlayer = $sfx_swap
+@onready var sfx_match: AudioStreamPlayer = $sfx_match
+@onready var sfx_invalid: AudioStreamPlayer = $sfx_invalid
+
 func _ready():
 	state = MOVE
 	randomize()
 	all_pieces = make_2d_array()
 	spawn_pieces()
+	emit_signal("counter_changed", moves_remaining)
+	emit_signal("score_changed", score)
+	sfx_swap.stream = load("res://assets/sounds/1.ogg")
+	sfx_match.stream = load("res://assets/sounds/3.ogg")
+	sfx_invalid.stream = load("res://assets/sounds/4.ogg")
 
 func make_2d_array():
 	var array = []
@@ -129,20 +137,16 @@ func swap_pieces(column, row, direction: Vector2):
 	var other_piece = all_pieces[column + direction.x][row + direction.y]
 	if first_piece == null or other_piece == null:
 		return
-	# swap
 	state = WAIT
 	store_info(first_piece, other_piece, Vector2(column, row), direction)
 	all_pieces[column][row] = other_piece
 	all_pieces[column + direction.x][row + direction.y] = first_piece
-	#first_piece.position = grid_to_pixel(column + direction.x, row + direction.y)
-	#other_piece.position = grid_to_pixel(column, row)
 	first_piece.move(grid_to_pixel(column + direction.x, row + direction.y))
 	other_piece.move(grid_to_pixel(column, row))
-	# TODO (PARCIAL · M3): si alguna de las piezas intercambiadas es especial,
-	# actívala aquí (su efecto reemplaza a la búsqueda normal de combinaciones).
-	# TODO (PARCIAL · B2): un intercambio válido consume una jugada. Decide dónde
-	# descontar el contador: aquí, o en destroy_matched() solo si hubo combinación.
 	if not move_checked:
+		moves_remaining -= 1
+		emit_signal("counter_changed", moves_remaining)
+		sfx_swap.play()
 		find_matches()
 
 func store_info(first_piece, other_piece, place, direction):
@@ -154,8 +158,14 @@ func store_info(first_piece, other_piece, place, direction):
 func swap_back():
 	if piece_one != null and piece_two != null:
 		swap_pieces(last_place.x, last_place.y, last_direction)
-	state = MOVE
-	move_checked = false
+	sfx_invalid.play()
+	if moves_remaining <= 0:
+		game_over(false)
+	elif score >= target_score:
+		game_over(true)
+	else:
+		state = MOVE
+		move_checked = false
 
 func touch_difference(grid_1, grid_2):
 	var difference = grid_2 - grid_1
@@ -222,13 +232,14 @@ func destroy_matched():
 		for j in height:
 			if all_pieces[i][j] != null and all_pieces[i][j].matched:
 				was_matched = true
-				# TODO (PARCIAL · B1): suma puntaje por cada pieza destruida (o por
-				# combinación) y emite score_changed para actualizar el HUD.
+				score += 10
+				emit_signal("score_changed", score)
 				all_pieces[i][j].queue_free()
 				all_pieces[i][j] = null
 
 	move_checked = true
 	if was_matched:
+		sfx_match.play()
 		collapse_timer.start()
 	else:
 		swap_back()
@@ -277,13 +288,13 @@ func check_after_refill():
 				find_matches()
 				destroy_timer.start()
 				return
-	# El tablero quedó estable: no hay más combinaciones en cascada.
-	# TODO (PARCIAL · M1): verifica si se cumplió o falló el objetivo del nivel
-	# (puntaje meta, piezas recolectadas, etc.) y dispara victoria o derrota.
-	# TODO (PARCIAL · M2): comprueba si todavía existe alguna jugada válida; si no,
-	# rebaraja el tablero hasta que haya al menos una.
-	state = MOVE
-	move_checked = false
+	if moves_remaining <= 0:
+		game_over(false)
+	elif score >= target_score:
+		game_over(true)
+	else:
+		state = MOVE
+		move_checked = false
 
 func _on_destroy_timer_timeout():
 	destroy_matched()
@@ -294,12 +305,26 @@ func _on_collapse_timer_timeout():
 func _on_refill_timer_timeout():
 	refill_columns()
 	
-func game_over():
+func game_over(won: bool):
 	state = WAIT
-	# TODO (PARCIAL · B3): muestra la pantalla final (victoria o derrota), detén la
-	# entrada del jugador y ofrece reiniciar la partida. Emite game_finished(gano).
-	# TODO (PARCIAL · M4): guarda el progreso (nivel alcanzado) y el mejor puntaje
-	# en disco (user://) para conservarlos entre sesiones.
+	emit_signal("game_finished", won)
+	var game_over_node = get_parent().get_node("GameOver")
+	if game_over_node:
+		game_over_node.show_game_over(won, score)
+
+func restart_game():
+	for i in width:
+		for j in height:
+			if all_pieces[i][j] != null:
+				all_pieces[i][j].queue_free()
+				all_pieces[i][j] = null
+	all_pieces = make_2d_array()
+	score = 0
+	moves_remaining = 30
+	emit_signal("score_changed", score)
+	emit_signal("counter_changed", moves_remaining)
+	spawn_pieces()
+	state = MOVE
 
 # TODO (PARCIAL · M2): funciones sugeridas para detectar el bloqueo del tablero.
 # func hay_jugadas_validas() -> bool:

@@ -1,9 +1,10 @@
-[gd_scene load_steps=5 format=3 uid="uid://cruh8bbcfvyvr"]
+[gd_scene load_steps=6 format=3 uid="uid://cruh8bbcfvyvr"]
 
 [ext_resource type="Texture2D" uid="uid://brp4euwugc18f" path="res://assets/background.png" id="1_blg2x"]
 [ext_resource type="PackedScene" uid="uid://bt33j5dwxano3" path="res://scenes/top_ui.tscn" id="2_wrbvl"]
 [ext_resource type="Texture2D" uid="uid://cdunkljd6up72" path="res://assets/bottom_ui.png" id="3_jy0d4"]
 [ext_resource type="Script" uid="uid://biuagxx08tqcb" path="res://scripts/grid.gd" id="4_4jr62"]
+[ext_resource type="PackedScene" uid="uid://dgap8nls5en6t" path="res://scenes/game_over.tscn" id="5_he7x3"]
 
 [node name="Game" type="Node2D"]
 
@@ -20,6 +21,8 @@ offset_right = 576.0
 offset_bottom = 1020.0
 texture = ExtResource("3_jy0d4")
 
+[node name="GameOver" parent="." instance=ExtResource("5_he7x3")]
+
 [node name="grid" type="Node2D" parent="."]
 script = ExtResource("4_4jr62")
 width = 8
@@ -28,6 +31,12 @@ x_start = 64
 y_start = 800
 offset = 64
 y_offset = 2
+
+[node name="sfx_swap" type="AudioStreamPlayer" parent="grid"]
+
+[node name="sfx_match" type="AudioStreamPlayer" parent="grid"]
+
+[node name="sfx_invalid" type="AudioStreamPlayer" parent="grid"]
 
 [node name="destroy_timer" type="Timer" parent="grid"]
 wait_time = 0.5
