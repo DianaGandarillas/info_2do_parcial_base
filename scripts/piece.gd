@@ -30,3 +30,4 @@ func set_special(type: SpecialType, color_name: String):
 		var type_str = SpecialType.keys()[type]
 		path = "res://assets/pieces/" + color_name.capitalize() + " " + type_str.capitalize() + ".png"
 	$Sprite2D.texture = load(path)
+	$Sprite2D.modulate = Color(1, 1, 1, 1)

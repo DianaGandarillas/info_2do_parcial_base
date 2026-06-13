@@ -138,15 +138,19 @@ func touch_input():
 		touch_difference(first_touch, final_touch)
 
 func swap_pieces(column, row, direction: Vector2):
+	var target_col = column + direction.x
+	var target_row = row + direction.y
+	if not in_grid(target_col, target_row):
+		return
 	var first_piece = all_pieces[column][row]
-	var other_piece = all_pieces[column + direction.x][row + direction.y]
+	var other_piece = all_pieces[target_col][target_row]
 	if first_piece == null or other_piece == null:
 		return
 	state = WAIT
 	store_info(first_piece, other_piece, Vector2(column, row), direction)
 	all_pieces[column][row] = other_piece
-	all_pieces[column + direction.x][row + direction.y] = first_piece
-	first_piece.move(grid_to_pixel(column + direction.x, row + direction.y))
+	all_pieces[target_col][target_row] = first_piece
+	first_piece.move(grid_to_pixel(target_col, target_row))
 	other_piece.move(grid_to_pixel(column, row))
 	if not move_checked:
 		moves_remaining -= 1
@@ -156,12 +160,28 @@ func swap_pieces(column, row, direction: Vector2):
 			activate_special_swap()
 		else:
 			find_matches()
+			if destroy_timer.is_stopped():
+				undo_invalid_swap()
 
 func store_info(first_piece, other_piece, place, direction):
 	piece_one = first_piece
 	piece_two = other_piece
 	last_place = place
 	last_direction = direction
+
+func undo_invalid_swap():
+	all_pieces[last_place.x][last_place.y] = piece_one
+	all_pieces[last_place.x + last_direction.x][last_place.y + last_direction.y] = piece_two
+	piece_one.move(grid_to_pixel(last_place.x, last_place.y))
+	piece_two.move(grid_to_pixel(last_place.x + last_direction.x, last_place.y + last_direction.y))
+	sfx_invalid.play()
+	if moves_remaining <= 0:
+		game_over(false)
+	elif score >= target_score:
+		game_over(true)
+	else:
+		state = MOVE
+		move_checked = false
 
 func swap_back():
 	if piece_one != null and piece_two != null:
@@ -271,7 +291,7 @@ func destroy_matched():
 
 	for spec in specials_to_create:
 		var piece = all_pieces[spec.col][spec.row]
-		if piece != null:
+		if piece != null and not piece.is_special():
 			piece.set_special(spec.type, spec.color)
 			was_matched = true
 	specials_to_create.clear()
@@ -327,10 +347,10 @@ func check_after_refill():
 				find_matches()
 				destroy_timer.start()
 				return
-	if moves_remaining <= 0:
-		game_over(false)
-	elif score >= target_score:
+	if score >= target_score:
 		game_over(true)
+	elif moves_remaining <= 0:
+		game_over(false)
 	else:
 		if not has_valid_moves():
 			reshuffle()
@@ -566,3 +586,12 @@ func reshuffle():
 			var path = "res://assets/pieces/" + colors[idx].capitalize() + " Piece.png"
 			all_pieces[p.col][p.row].get_node("Sprite2D").texture = load(path)
 		attempts += 1
+	if not has_valid_moves():
+		var fallback_colors = ["blue", "green", "light_green", "pink", "yellow", "orange"]
+		for i in width:
+			for j in height:
+				if all_pieces[i][j] != null and not all_pieces[i][j].is_special():
+					var rand_color = fallback_colors[randi_range(0, fallback_colors.size() - 1)]
+					all_pieces[i][j].color = rand_color
+					var path = "res://assets/pieces/" + rand_color.capitalize() + " Piece.png"
+					all_pieces[i][j].get_node("Sprite2D").texture = load(path)
