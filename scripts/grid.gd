@@ -12,6 +12,8 @@ var state
 @export var offset: int
 @export var y_offset: int
 
+const PieceClass = preload("res://scripts/piece.gd")
+
 # piece array
 var possible_pieces = [
 	preload("res://scenes/blue_piece.tscn"),
@@ -23,6 +25,9 @@ var possible_pieces = [
 ]
 # current pieces in scene
 var all_pieces = []
+
+# special pieces to create after destroy
+var specials_to_create = []
 
 # swap back
 var piece_one = null
@@ -147,7 +152,10 @@ func swap_pieces(column, row, direction: Vector2):
 		moves_remaining -= 1
 		emit_signal("counter_changed", moves_remaining)
 		sfx_swap.play()
-		find_matches()
+		if piece_one.is_special() or piece_two.is_special():
+			activate_special_swap()
+		else:
+			find_matches()
 
 func store_info(first_piece, other_piece, place, direction):
 	piece_one = first_piece
@@ -186,45 +194,69 @@ func _process(delta):
 		touch_input()
 
 func find_matches():
-	# TODO (PARCIAL · M3): aquí es donde se decide qué piezas forman cada combinación.
-	# Para crear piezas especiales necesitas conocer el LARGO de cada línea: una de 4
-	# genera una pieza de línea (fila/columna) y una de 5 una bomba de color. El chequeo
-	# actual solo mira el "centro" de tríos; probablemente tengas que recorrer las
-	# líneas completas para distinguir combinaciones de 3, 4 y 5.
+	specials_to_create.clear()
+
+	# Horizontal runs
+	for j in height:
+		var i = 0
+		while i < width:
+			if all_pieces[i][j] == null or all_pieces[i][j].is_special():
+				i += 1
+				continue
+			var current_color = all_pieces[i][j].color
+			var run_start = i
+			var run_length = 0
+			while i < width and all_pieces[i][j] != null and not all_pieces[i][j].is_special() and all_pieces[i][j].color == current_color:
+				run_length += 1
+				i += 1
+			if run_length >= 3:
+				for k in range(run_start, run_start + run_length):
+					all_pieces[k][j].matched = true
+					all_pieces[k][j].dim()
+				if run_length == 4:
+					var last = run_start + run_length - 1
+					all_pieces[last][j].matched = false
+					specials_to_create.append({col = last, row = j, type = PieceClass.SpecialType.ROW, color = current_color})
+				elif run_length >= 5:
+					var last = run_start + run_length - 1
+					all_pieces[last][j].matched = false
+					specials_to_create.append({col = last, row = j, type = PieceClass.SpecialType.RAINBOW, color = current_color})
+
+	# Vertical runs
+	for i in width:
+		var j = 0
+		while j < height:
+			if all_pieces[i][j] == null or all_pieces[i][j].is_special():
+				j += 1
+				continue
+			var current_color = all_pieces[i][j].color
+			var run_start = j
+			var run_length = 0
+			while j < height and all_pieces[i][j] != null and not all_pieces[i][j].is_special() and all_pieces[i][j].color == current_color:
+				run_length += 1
+				j += 1
+			if run_length >= 3:
+				for k in range(run_start, run_start + run_length):
+					all_pieces[i][k].matched = true
+					all_pieces[i][k].dim()
+				if run_length == 4:
+					var last = run_start + run_length - 1
+					all_pieces[i][last].matched = false
+					specials_to_create.append({col = i, row = last, type = PieceClass.SpecialType.COLUMN, color = current_color})
+				elif run_length >= 5:
+					var last = run_start + run_length - 1
+					all_pieces[i][last].matched = false
+					specials_to_create.append({col = i, row = last, type = PieceClass.SpecialType.RAINBOW, color = current_color})
+
+	if specials_to_create.size() > 0 or _has_matched():
+		destroy_timer.start()
+
+func _has_matched() -> bool:
 	for i in width:
 		for j in height:
-			if all_pieces[i][j] != null:
-				var current_color = all_pieces[i][j].color
-				# detect horizontal matches
-				if (
-					i > 0 and i < width -1 
-					and 
-					all_pieces[i - 1][j] != null and all_pieces[i + 1][j]
-					and 
-					all_pieces[i - 1][j].color == current_color and all_pieces[i + 1][j].color == current_color
-				):
-					all_pieces[i - 1][j].matched = true
-					all_pieces[i - 1][j].dim()
-					all_pieces[i][j].matched = true
-					all_pieces[i][j].dim()
-					all_pieces[i + 1][j].matched = true
-					all_pieces[i + 1][j].dim()
-				# detect vertical matches
-				if (
-					j > 0 and j < height -1 
-					and 
-					all_pieces[i][j - 1] != null and all_pieces[i][j + 1]
-					and 
-					all_pieces[i][j - 1].color == current_color and all_pieces[i][j + 1].color == current_color
-				):
-					all_pieces[i][j - 1].matched = true
-					all_pieces[i][j - 1].dim()
-					all_pieces[i][j].matched = true
-					all_pieces[i][j].dim()
-					all_pieces[i][j + 1].matched = true
-					all_pieces[i][j + 1].dim()
-					
-	destroy_timer.start()
+			if all_pieces[i][j] != null and all_pieces[i][j].matched:
+				return true
+	return false
 	
 func destroy_matched():
 	var was_matched = false
@@ -236,6 +268,13 @@ func destroy_matched():
 				emit_signal("score_changed", score)
 				all_pieces[i][j].queue_free()
 				all_pieces[i][j] = null
+
+	for spec in specials_to_create:
+		var piece = all_pieces[spec.col][spec.row]
+		if piece != null:
+			piece.set_special(spec.type, spec.color)
+			was_matched = true
+	specials_to_create.clear()
 
 	move_checked = true
 	if was_matched:
@@ -293,6 +332,11 @@ func check_after_refill():
 	elif score >= target_score:
 		game_over(true)
 	else:
+		if not has_valid_moves():
+			reshuffle()
+			find_matches()
+			if _has_matched() or specials_to_create.size() > 0:
+				return
 		state = MOVE
 		move_checked = false
 
@@ -313,12 +357,24 @@ func game_over(won: bool):
 		game_over_node.show_game_over(won, score)
 
 func restart_game():
+	destroy_timer.stop()
+	collapse_timer.stop()
+	refill_timer.stop()
+	specials_to_create.clear()
 	for i in width:
 		for j in height:
 			if all_pieces[i][j] != null:
 				all_pieces[i][j].queue_free()
 				all_pieces[i][j] = null
 	all_pieces = make_2d_array()
+	piece_one = null
+	piece_two = null
+	last_place = Vector2.ZERO
+	last_direction = Vector2.ZERO
+	move_checked = false
+	is_controlling = false
+	first_touch = Vector2.ZERO
+	final_touch = Vector2.ZERO
 	score = 0
 	moves_remaining = 30
 	emit_signal("score_changed", score)
@@ -326,6 +382,187 @@ func restart_game():
 	spawn_pieces()
 	state = MOVE
 
-# TODO (PARCIAL · M2): funciones sugeridas para detectar el bloqueo del tablero.
-# func hay_jugadas_validas() -> bool:
-# func rebarajar() -> void:
+# === Activación de especiales (M3) ===
+
+func activate_special_swap():
+	if piece_one.is_special() and piece_two.is_special():
+		activate_combo(piece_one, piece_two)
+		return
+
+	var spec_piece = piece_one if piece_one.is_special() else piece_two
+	var norm_piece = piece_two if piece_one.is_special() else piece_one
+	var spec_col = last_place.x + last_direction.x if piece_one.is_special() else last_place.x
+	var spec_row = last_place.y + last_direction.y if piece_one.is_special() else last_place.y
+
+	spec_piece.matched = true
+	spec_piece.dim()
+	norm_piece.matched = true
+	norm_piece.dim()
+
+	match spec_piece.special_type:
+		PieceClass.SpecialType.ROW:
+			mark_row(spec_row)
+		PieceClass.SpecialType.COLUMN:
+			mark_column(spec_col)
+		PieceClass.SpecialType.RAINBOW:
+			mark_color(norm_piece.color)
+		PieceClass.SpecialType.ADJACENT:
+			mark_adjacent(spec_col, spec_row)
+
+	destroy_timer.start()
+
+func activate_combo(piece_a, piece_b):
+	piece_a.matched = true
+	piece_a.dim()
+	piece_b.matched = true
+	piece_b.dim()
+
+	var type_a = piece_a.special_type
+	var type_b = piece_b.special_type
+	var col_a = last_place.x + last_direction.x
+	var row_a = last_place.y + last_direction.y
+	var col_b = last_place.x
+	var row_b = last_place.y
+
+	if (type_a == PieceClass.SpecialType.ROW and type_b == PieceClass.SpecialType.COLUMN):
+		mark_row(row_a)
+		mark_column(col_b)
+	elif (type_a == PieceClass.SpecialType.COLUMN and type_b == PieceClass.SpecialType.ROW):
+		mark_column(col_a)
+		mark_row(row_b)
+	elif type_a == PieceClass.SpecialType.RAINBOW and type_b == PieceClass.SpecialType.RAINBOW:
+		for i in width:
+			for j in height:
+				if all_pieces[i][j] != null and not all_pieces[i][j].matched:
+					all_pieces[i][j].matched = true
+					all_pieces[i][j].dim()
+	elif type_a == PieceClass.SpecialType.RAINBOW:
+		mark_color(piece_b.color)
+		match type_b:
+			PieceClass.SpecialType.ROW: mark_row(row_b)
+			PieceClass.SpecialType.COLUMN: mark_column(col_b)
+			PieceClass.SpecialType.ADJACENT: mark_adjacent(col_b, row_b)
+	elif type_b == PieceClass.SpecialType.RAINBOW:
+		mark_color(piece_a.color)
+		match type_a:
+			PieceClass.SpecialType.ROW: mark_row(row_a)
+			PieceClass.SpecialType.COLUMN: mark_column(col_a)
+			PieceClass.SpecialType.ADJACENT: mark_adjacent(col_a, row_a)
+	else:
+		match type_a:
+			PieceClass.SpecialType.ROW: mark_row(row_a)
+			PieceClass.SpecialType.COLUMN: mark_column(col_a)
+			PieceClass.SpecialType.ADJACENT: mark_adjacent(col_a, row_a)
+		match type_b:
+			PieceClass.SpecialType.ROW: mark_row(row_b)
+			PieceClass.SpecialType.COLUMN: mark_column(col_b)
+			PieceClass.SpecialType.ADJACENT: mark_adjacent(col_b, row_b)
+
+	destroy_timer.start()
+
+func mark_row(row):
+	for i in width:
+		if all_pieces[i][row] != null and not all_pieces[i][row].matched:
+			all_pieces[i][row].matched = true
+			all_pieces[i][row].dim()
+
+func mark_column(col):
+	for j in height:
+		if all_pieces[col][j] != null and not all_pieces[col][j].matched:
+			all_pieces[col][j].matched = true
+			all_pieces[col][j].dim()
+
+func mark_color(color):
+	for i in width:
+		for j in height:
+			if all_pieces[i][j] != null and all_pieces[i][j].color == color and not all_pieces[i][j].matched:
+				all_pieces[i][j].matched = true
+				all_pieces[i][j].dim()
+
+func mark_adjacent(col, row):
+	for di in range(-1, 2):
+		for dj in range(-1, 2):
+			var ni = col + di
+			var nj = row + dj
+			if in_grid(ni, nj) and all_pieces[ni][nj] != null and not all_pieces[ni][nj].matched:
+				all_pieces[ni][nj].matched = true
+				all_pieces[ni][nj].dim()
+
+# === Detección de bloqueo y rebarajado (M2) ===
+
+func has_valid_moves() -> bool:
+	for i in width:
+		for j in height:
+			if all_pieces[i][j] != null and all_pieces[i][j].is_special():
+				return true
+	for i in width:
+		for j in height:
+			if all_pieces[i][j] == null or all_pieces[i][j].is_special():
+				continue
+			if i + 1 < width and all_pieces[i + 1][j] != null and not all_pieces[i + 1][j].is_special():
+				if swap_creates_match(i, j, i + 1, j):
+					return true
+			if j + 1 < height and all_pieces[i][j + 1] != null and not all_pieces[i][j + 1].is_special():
+				if swap_creates_match(i, j, i, j + 1):
+					return true
+	return false
+
+func swap_creates_match(c1, r1, c2, r2) -> bool:
+	var temp = all_pieces[c1][r1]
+	all_pieces[c1][r1] = all_pieces[c2][r2]
+	all_pieces[c2][r2] = temp
+
+	var result = check_match_at(c1, r1) or check_match_at(c2, r2)
+
+	temp = all_pieces[c1][r1]
+	all_pieces[c1][r1] = all_pieces[c2][r2]
+	all_pieces[c2][r2] = temp
+
+	return result
+
+func check_match_at(col, row) -> bool:
+	var piece = all_pieces[col][row]
+	if piece == null or piece.is_special():
+		return false
+	var color = piece.color
+
+	var count = 1
+	var i = col - 1
+	while i >= 0 and all_pieces[i][row] != null and not all_pieces[i][row].is_special() and all_pieces[i][row].color == color:
+		count += 1
+		i -= 1
+	i = col + 1
+	while i < width and all_pieces[i][row] != null and not all_pieces[i][row].is_special() and all_pieces[i][row].color == color:
+		count += 1
+		i += 1
+	if count >= 3:
+		return true
+
+	count = 1
+	var j = row - 1
+	while j >= 0 and all_pieces[col][j] != null and not all_pieces[col][j].is_special() and all_pieces[col][j].color == color:
+		count += 1
+		j -= 1
+	j = row + 1
+	while j < height and all_pieces[col][j] != null and not all_pieces[col][j].is_special() and all_pieces[col][j].color == color:
+		count += 1
+		j += 1
+	return count >= 3
+
+func reshuffle():
+	var attempts = 0
+	while not has_valid_moves() and attempts < 50:
+		var colors = []
+		var positions = []
+		for i in width:
+			for j in height:
+				if all_pieces[i][j] != null and not all_pieces[i][j].is_special():
+					colors.append(all_pieces[i][j].color)
+					positions.append({col = i, row = j})
+		colors.shuffle()
+		for idx in range(positions.size()):
+			var p = positions[idx]
+			all_pieces[p.col][p.row].color = colors[idx]
+			var path = "res://assets/pieces/" + colors[idx].capitalize() + " Piece.png"
+			all_pieces[p.col][p.row].get_node("Sprite2D").texture = load(path)
+		attempts += 1
