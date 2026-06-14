@@ -5,4 +5,5 @@
 [resource]
 script = ExtResource("1_e28t1")
 nombre = "Nivel 2"
+objetivo_valor = 800
 metadata/_custom_type_script = "uid://blhm7y1ddy3c6"

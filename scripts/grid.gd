@@ -63,17 +63,26 @@ var levels = []
 var current_level_index = 0
 var current_level : LevelConfig
 
+#m4
+const SAVE_FILE = "user://save.json"
+var best_score = 0
+
 # === Sonidos (B4) ===
 @onready var sfx_swap: AudioStreamPlayer = $sfx_swap
 @onready var sfx_match: AudioStreamPlayer = $sfx_match
 @onready var sfx_invalid: AudioStreamPlayer = $sfx_invalid
 
 func _ready():
+	print(ProjectSettings.globalize_path(SAVE_FILE))
 	state = MOVE
 	randomize()
 	#M1
 	load_levels()
-	load_level(0)
+	##load_level(0)
+	#m4
+	load_progress()
+	load_level(current_level_index)
+	
 	all_pieces = make_2d_array()
 	spawn_pieces()
 	emit_signal("counter_changed", moves_remaining)
@@ -388,6 +397,8 @@ func game_over(won: bool):
 	if won:
 		if current_level_index < levels.size() - 1:
 			current_level_index += 1
+		#m4
+		save_progress()
 	emit_signal("game_finished", won)
 	var game_over_node = get_parent().get_node("GameOver")
 	if game_over_node:
@@ -637,3 +648,52 @@ func load_level(index:int):
 
 	emit_signal("counter_changed", moves_remaining)
 	emit_signal("objective_changed","Meta: %d puntos" % target_score)
+	
+	
+#M4
+	
+func save_progress():
+
+	if score > best_score:
+		best_score = score
+
+	var data = {
+
+		"level": current_level_index,
+
+		"best_score": best_score
+	}
+	print("Guardando...")
+	print("Nivel:", current_level_index)
+	print("Best score:", best_score)
+
+	var file = FileAccess.open(
+		SAVE_FILE,
+		FileAccess.WRITE
+	)
+
+	file.store_string(JSON.stringify(data))
+	
+	
+func load_progress():
+
+	if not FileAccess.file_exists(SAVE_FILE):
+		return
+
+	var file = FileAccess.open(
+		SAVE_FILE,
+		FileAccess.READ
+	)
+
+	var data = JSON.parse_string(
+		file.get_as_text()
+	)
+
+	if data == null:
+		return
+
+	current_level_index = data["level"]
+
+	best_score = data["best_score"]
+	print("Nivel cargado:", current_level_index)
+	print("Best score:", best_score)

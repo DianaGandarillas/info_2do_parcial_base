@@ -4,6 +4,7 @@
 
 [resource]
 script = ExtResource("1_nvcot")
-objetivo_valor = 1500
+nombre = "Nivel 3"
+objetivo_valor = 1200
 limite_movimientos = 26
 metadata/_custom_type_script = "uid://blhm7y1ddy3c6"

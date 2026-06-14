@@ -1,4 +1,4 @@
-[gd_scene load_steps=6 format=3 uid="uid://cruh8bbcfvyvr"]
+[gd_scene format=3 uid="uid://cruh8bbcfvyvr"]
 
 [ext_resource type="Texture2D" uid="uid://brp4euwugc18f" path="res://assets/background.png" id="1_blg2x"]
 [ext_resource type="PackedScene" uid="uid://bt33j5dwxano3" path="res://scenes/top_ui.tscn" id="2_wrbvl"]
@@ -6,24 +6,24 @@
 [ext_resource type="Script" uid="uid://biuagxx08tqcb" path="res://scripts/grid.gd" id="4_4jr62"]
 [ext_resource type="PackedScene" uid="uid://dgap8nls5en6t" path="res://scenes/game_over.tscn" id="5_he7x3"]
 
-[node name="Game" type="Node2D"]
+[node name="Game" type="Node2D" unique_id=1188816286]
 
-[node name="background" type="TextureRect" parent="."]
+[node name="background" type="TextureRect" parent="." unique_id=388135291]
 offset_right = 576.0
 offset_bottom = 1024.0
 texture = ExtResource("1_blg2x")
 
-[node name="top_ui" parent="." instance=ExtResource("2_wrbvl")]
+[node name="top_ui" parent="." unique_id=1277432636 instance=ExtResource("2_wrbvl")]
 
-[node name="bottom_ui" type="TextureRect" parent="."]
+[node name="bottom_ui" type="TextureRect" parent="." unique_id=374463016]
 offset_top = 928.0
 offset_right = 576.0
 offset_bottom = 1020.0
 texture = ExtResource("3_jy0d4")
 
-[node name="GameOver" parent="." instance=ExtResource("5_he7x3")]
+[node name="GameOver" parent="." unique_id=1141434337 instance=ExtResource("5_he7x3")]
 
-[node name="grid" type="Node2D" parent="."]
+[node name="grid" type="Node2D" parent="." unique_id=1596632714]
 script = ExtResource("4_4jr62")
 width = 8
 height = 10
@@ -32,21 +32,21 @@ y_start = 800
 offset = 64
 y_offset = 2
 
-[node name="sfx_swap" type="AudioStreamPlayer" parent="grid"]
+[node name="sfx_swap" type="AudioStreamPlayer" parent="grid" unique_id=87554092]
 
-[node name="sfx_match" type="AudioStreamPlayer" parent="grid"]
+[node name="sfx_match" type="AudioStreamPlayer" parent="grid" unique_id=441153918]
 
-[node name="sfx_invalid" type="AudioStreamPlayer" parent="grid"]
+[node name="sfx_invalid" type="AudioStreamPlayer" parent="grid" unique_id=1547458414]
 
-[node name="destroy_timer" type="Timer" parent="grid"]
+[node name="destroy_timer" type="Timer" parent="grid" unique_id=473412488]
 wait_time = 0.5
 one_shot = true
 
-[node name="collapse_timer" type="Timer" parent="grid"]
+[node name="collapse_timer" type="Timer" parent="grid" unique_id=488882874]
 wait_time = 0.5
 one_shot = true
 
-[node name="refill_timer" type="Timer" parent="grid"]
+[node name="refill_timer" type="Timer" parent="grid" unique_id=1732900281]
 wait_time = 0.5
 one_shot = true
 
