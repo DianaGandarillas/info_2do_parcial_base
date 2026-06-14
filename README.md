@@ -1,60 +1,60 @@
 # Segundo Parcial — Match-3 (Infografía, I/2026)
 
-Proyecto base para el segundo parcial. Recibes un juego **Match-3** funcional pero
-incompleto, hecho en **Godot 4.6**, y tu trabajo es convertirlo en un juego completo.
+## NOMBRES: YERY GALLARDO Y DIANA GANDARILLAS
 
-> 📋 **El enunciado completo, la rúbrica y los criterios de evaluación están en
-> [`enunciado.md`](enunciado.md). Léelo antes de empezar.**
+Proyecto **Match-3** hecho en **Godot 4.6** para el segundo parcial de Infografía.
 
 ## Cómo correr el juego
 
 1. Instala [Godot 4.6](https://godotengine.org/download).
-2. Abre **esta carpeta** desde el editor de Godot (botón *Import* → selecciona el
-   `project.godot`).
+2. Abre esta carpeta desde el editor de Godot (botón *Import* → selecciona el `project.godot`).
 3. Presiona `F5` (o el botón *Play* ▶). La escena principal es `scenes/game.tscn`.
 
-Deberías poder intercambiar piezas y ver combinaciones que se destruyen, caen y se
-rellenan. Ese núcleo ya está resuelto.
+El juego arranca en el nivel 1. Intercambiá piezas deslizando el mouse para formar
+combinaciones de 3 o más del mismo color. Llegá al puntaje objetivo antes de que se
+acaben los movimientos para avanzar al siguiente nivel.
 
-## Por dónde empezar
+## Mecánicas implementadas
 
-El núcleo del juego está hecho; lo que falta está marcado en el código con comentarios
-`# TODO (PARCIAL · <ítem>)`. Búscalos para saber exactamente dónde conectar cada cosa:
+### Base (B1–B5)
+- **B1** — Puntaje + HUD: cada combinación suma puntos, las etiquetas se actualizan en vivo.
+- **B2** — Límite de movimientos + contador visible en pantalla.
+- **B3** — Pantalla de victoria/derrota con overlay, puntaje final y botón "Jugar de nuevo".
+- **B4** — Efectos de sonido para intercambio, combinación y jugada inválida.
+- **B5** — Sin errores en consola, bucle base funcional.
+
+### Mecánicas obligatorias (M1–M4)
+- **M1 — Sistema de niveles:** 3 niveles con distinta meta de puntaje y límite de
+  movimientos, cargados desde archivos `.tres`. Al completar un nivel se avanza al
+  siguiente. El HUD muestra el progreso y el objetivo.
+- **M2 — Detección de bloqueo + rebarajado:** si no quedan jugadas válidas, el tablero
+  se rebaraja automáticamente sin intervención del jugador.
+- **M3 — Piezas especiales + combos:**
+  - 4 en línea → pieza **ROW** (horizontal) o **COLUMN** (vertical). Al activarse
+    limpia toda la fila o columna.
+  - 5 en línea → pieza **RAINBOW** (bomba de color). Al activarse elimina todas las
+    piezas de ese color.
+  - Se activan al intercambiar la especial con una pieza normal.
+  - Combos especial+especial: ROW+COLUMN (cruz), RAINBOW+RAINBOW (todo el tablero),
+    RAINBOW+ROW/COLUMN/ADJACENT, etc.
+- **M4 — Persistencia:** guarda el nivel alcanzado y el mejor puntaje en
+  `user://save.json`. Al reabrir el juego se retoma desde el último nivel desbloqueado.la
+  ubicacion de ese archivo se muestra en la consola al igual que la informacion que guarda
+  EJEMPLO: "C:/Users/User/AppData/Roaming/Godot/app_userdata/match3/save.json
+Nivel cargado:1.0
+Best score:530.0
+"
+
+## Estructura del proyecto
 
 ```
-grep -rn "TODO (PARCIAL" scripts/
-```
-
-Cada marcador corresponde a un ítem de la rúbrica (B1–B5 base, M1–M4 obligatorias).
-
-## Estructura
-
-```
-scenes/         escenas: game.tscn (principal), piece.tscn y las piezas de color
+scenes/          escenas: game.tscn (principal), piece.tscn y las piezas de color
 scripts/
-  grid.gd         toda la lógica del tablero (intercambio, match, destruir, colapsar, rellenar)
-  piece.gd        una pieza individual (color, animación de movimiento)
-  top_ui.gd       el HUD: etiquetas de puntaje y contador (por conectar)
-  level_config.gd andamiaje sugerido para niveles dirigidos por datos (M1/M4)
-assets/         sprites de piezas (incluye especiales), fuente, fondo y sonidos
-enunciado.md    el enunciado completo con la rúbrica
+  grid.gd         lógica del tablero (intercambio, match, destruir, colapsar, rellenar)
+  piece.gd        pieza individual (color, animación, especiales)
+  top_ui.gd       HUD: puntaje, contador y objetivo
+  game_over.gd    pantalla de fin de partida
+  level_config.gd recurso para definir niveles data-driven
+levels/          archivos .tres con la configuración de cada nivel
+assets/          sprites de piezas (incluye especiales), fuente, fondo y sonidos
 ```
-
-## Qué debes implementar (resumen)
-
-**Base (termina el juego):** puntaje + HUD, límite de movimientos/tiempo, victoria/derrota
-con pantalla final y reinicio, sonidos.
-**Obligatorias (más allá del tutorial):** sistema de objetivos/niveles, detección de
-bloqueo + rebarajado, piezas especiales + combos, niveles dirigidos por datos + persistencia.
-
-Detalle y puntajes en [`enunciado.md`](enunciado.md).
-
-## Entrega
-
-1. Haz un **fork** (o copia a un repo propio) de este proyecto base.
-2. Trabaja con **commits frecuentes y descriptivos**: el historial se revisa.
-3. En **tu** README, escribe cómo correr el juego, qué mecánicas implementaste y los
-   recursos externos que consultaste (con enlaces).
-4. Entrega la **URL de tu repositorio** por Moodle antes de la fecha límite.
-
-No subas la carpeta `.godot/` (ya está en `.gitignore`).
